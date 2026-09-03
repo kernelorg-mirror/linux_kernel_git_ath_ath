@@ -139,7 +139,8 @@ static uint32_t get_sdma_rlc_reg_offset(struct amdgpu_device *adev,
 				regSDMA1_QUEUE0_RB_CNTL) - regSDMA0_QUEUE0_RB_CNTL;
 		break;
 	default:
-		BUG();
+		WARN(1, "Invalid SDMA engine id %d\n", engine_id);
+		break;
 	}
 
 	sdma_rlc_reg_offset = sdma_engine_reg_base
@@ -323,7 +324,7 @@ static int hqd_dump_v11(struct amdgpu_device *adev,
 		(*dump)[i++][1] = RREG32(addr);		\
 	} while (0)
 
-	*dump = kmalloc(HQD_N_REGS*2*sizeof(uint32_t), GFP_KERNEL);
+	*dump = kmalloc_objs(**dump, HQD_N_REGS);
 	if (*dump == NULL)
 		return -ENOMEM;
 
@@ -420,7 +421,7 @@ static int hqd_sdma_dump_v11(struct amdgpu_device *adev,
 #undef HQD_N_REGS
 #define HQD_N_REGS (7+11+1+12+12)
 
-	*dump = kmalloc(HQD_N_REGS*2*sizeof(uint32_t), GFP_KERNEL);
+	*dump = kmalloc_objs(**dump, HQD_N_REGS);
 	if (*dump == NULL)
 		return -ENOMEM;
 
