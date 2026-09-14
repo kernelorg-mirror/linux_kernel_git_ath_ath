@@ -625,14 +625,10 @@ r535_head_vblank_get(struct nvkm_head *head)
 	nvkm_mask(device, 0x611d80 + (head->id * 4), 0x00000002, 0x00000002);
 }
 
-static void
-r535_head_state(struct nvkm_head *head, struct nvkm_head_state *state)
-{
-}
-
 static const struct nvkm_head_func
 r535_head = {
-	.state = r535_head_state,
+	.state = gv100_head_state,
+	.rgpos = gv100_head_rgpos,
 	.vblank_get = r535_head_vblank_get,
 	.vblank_put = r535_head_vblank_put,
 };
@@ -648,7 +644,7 @@ r535_conn_new(struct nvkm_disp *disp, u32 id)
 	ctrl = nvkm_gsp_rm_ctrl_get(&disp->rm.objcom,
 				    NV0073_CTRL_CMD_SPECIFIC_GET_CONNECTOR_DATA, sizeof(*ctrl));
 	if (IS_ERR(ctrl))
-		return (void *)ctrl;
+		return ERR_CAST(ctrl);
 
 	ctrl->subDeviceInstance = 0;
 	ctrl->displayId = BIT(id);
@@ -1734,7 +1730,8 @@ r535_disp_new(const struct nvkm_disp_func *hw, struct nvkm_device *device,
 	struct nvkm_disp_func *rm;
 	int ret;
 
-	if (!(rm = kzalloc(sizeof(*rm) + 6 * sizeof(rm->user[0]), GFP_KERNEL)))
+	rm = kzalloc_flex(*rm, user, 6);
+	if (!rm)
 		return -ENOMEM;
 
 	rm->dtor = r535_disp_dtor;
