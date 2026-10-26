@@ -147,13 +147,14 @@ void drv_remove_interface(struct ieee80211_local *local,
 static inline int drv_config(struct ieee80211_local *local, int radio_idx,
 			     u32 changed)
 {
-	int ret;
+	int ret = 0;
 
 	might_sleep();
 	lockdep_assert_wiphy(local->hw.wiphy);
 
 	trace_drv_config(local, radio_idx, changed);
-	ret = local->ops->config(&local->hw, radio_idx, changed);
+	if (local->ops->config)
+		ret = local->ops->config(&local->hw, radio_idx, changed);
 	trace_drv_return_int(local, ret);
 	return ret;
 }
@@ -187,7 +188,7 @@ static inline u64 drv_prepare_multicast(struct ieee80211_local *local,
 {
 	u64 ret = 0;
 
-	trace_drv_prepare_multicast(local, mc_list->count);
+	trace_drv_prepare_multicast(local, netdev_hw_addr_list_count(mc_list));
 
 	if (local->ops->prepare_multicast)
 		ret = local->ops->prepare_multicast(&local->hw, mc_list);
@@ -617,42 +618,16 @@ static inline void drv_sta_rate_tbl_update(struct ieee80211_local *local,
 	trace_drv_return_void(local);
 }
 
-static inline void drv_sta_statistics(struct ieee80211_local *local,
-				      struct ieee80211_sub_if_data *sdata,
-				      struct ieee80211_sta *sta,
-				      struct station_info *sinfo)
-{
-	might_sleep();
-	lockdep_assert_wiphy(local->hw.wiphy);
-
-	sdata = get_bss_sdata(sdata);
-	if (!check_sdata_in_driver(sdata))
-		return;
-
-	trace_drv_sta_statistics(local, sdata, sta);
-	if (local->ops->sta_statistics)
-		local->ops->sta_statistics(&local->hw, &sdata->vif, sta, sinfo);
-	trace_drv_return_void(local);
-}
-
-static inline void drv_link_sta_statistics(struct ieee80211_local *local,
-					   struct ieee80211_sub_if_data *sdata,
-					   struct ieee80211_link_sta *link_sta,
-					   struct link_station_info *link_sinfo)
-{
-	might_sleep();
-	lockdep_assert_wiphy(local->hw.wiphy);
-
-	sdata = get_bss_sdata(sdata);
-	if (!check_sdata_in_driver(sdata))
-		return;
-
-	trace_drv_link_sta_statistics(local, sdata, link_sta);
-	if (local->ops->link_sta_statistics)
-		local->ops->link_sta_statistics(&local->hw, &sdata->vif,
-						link_sta, link_sinfo);
-	trace_drv_return_void(local);
-}
+int drv_sta_statistics(struct ieee80211_local *local,
+		       struct ieee80211_sub_if_data *sdata,
+		       struct ieee80211_sta *sta,
+		       struct station_info *sinfo,
+		       bool locked);
+int drv_link_sta_statistics(struct ieee80211_local *local,
+			    struct ieee80211_sub_if_data *sdata,
+			    struct ieee80211_link_sta *link_sta,
+			    struct link_station_info *link_sinfo,
+			    bool locked);
 
 int drv_conf_tx(struct ieee80211_local *local,
 		struct ieee80211_link_data *link, u16 ac,
@@ -1104,6 +1079,22 @@ static inline void drv_stop_ap(struct ieee80211_local *local,
 	trace_drv_stop_ap(local, sdata, link_conf);
 	if (local->ops->stop_ap)
 		local->ops->stop_ap(&local->hw, &sdata->vif, link_conf);
+	trace_drv_return_void(local);
+}
+
+static inline void drv_update_beacon(struct ieee80211_local *local,
+				     struct ieee80211_sub_if_data *sdata,
+				     struct ieee80211_bss_conf *link_conf,
+				     u64 changed)
+{
+	/* can race with HW restart, so don't warn */
+	if (!(sdata->flags & IEEE80211_SDATA_IN_DRIVER))
+		return;
+
+	trace_drv_update_beacon(local, sdata, link_conf, changed);
+	if (local->ops->update_beacon)
+		local->ops->update_beacon(&local->hw, &sdata->vif, link_conf,
+					  changed);
 	trace_drv_return_void(local);
 }
 
