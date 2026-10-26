@@ -401,6 +401,8 @@ static int cfg80211_set_encryption(struct cfg80211_registered_device *rdev,
 				   int idx, struct key_params *params)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
+	enum nl80211_key_type key_type =
+		pairwise ? NL80211_KEYTYPE_PAIRWISE : NL80211_KEYTYPE_GROUP;
 	int err, i;
 	bool rejoin = false;
 
@@ -454,11 +456,14 @@ static int cfg80211_set_encryption(struct cfg80211_registered_device *rdev,
 				rejoin = true;
 			}
 
-			if (!cfg80211_valid_key_idx(wdev, idx, pairwise, addr))
+			addr = cfg80211_get_key_mac_addr(wdev, 0, pairwise,
+							 addr);
+
+			if (!cfg80211_valid_key_idx(wdev, idx, key_type, addr))
 				err = -ENOENT;
 			else
-				err = rdev_del_key(rdev, wdev, -1, idx, pairwise,
-						   addr);
+				err = rdev_del_key(rdev, wdev, -1, idx,
+						   key_type, addr);
 		}
 		wdev->wext.connect.privacy = false;
 		/*
@@ -488,6 +493,8 @@ static int cfg80211_set_encryption(struct cfg80211_registered_device *rdev,
 
 	if (addr)
 		tx_key = false;
+
+	addr = cfg80211_get_key_mac_addr(wdev, params->cipher, pairwise, addr);
 
 	if (cfg80211_validate_key_settings(rdev, wdev, params, idx,
 					   pairwise, addr))
