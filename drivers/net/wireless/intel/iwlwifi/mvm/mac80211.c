@@ -19,7 +19,7 @@
 
 #include "iwl-drv.h"
 #include "iwl-op-mode.h"
-#include "iwl-io.h"
+#include "iwl-trans.h"
 #include "mvm.h"
 #include "sta.h"
 #include "time-event.h"
@@ -5258,7 +5258,7 @@ out_reassign:
 
 out_restart:
 	/* things keep failing, better restart the hw */
-	iwl_force_nmi(mvm->trans);
+	iwl_trans_force_nmi(mvm->trans);
 	return ret;
 }
 
@@ -5294,7 +5294,7 @@ out_reassign:
 
 out_restart:
 	/* things keep failing, better restart the hw */
-	iwl_force_nmi(mvm->trans);
+	iwl_trans_force_nmi(mvm->trans);
 	return ret;
 }
 
@@ -6359,7 +6359,6 @@ const struct ieee80211_ops iwl_mvm_hw_ops = {
 	.stop = iwl_mvm_mac_stop,
 	.add_interface = iwl_mvm_mac_add_interface,
 	.remove_interface = iwl_mvm_mac_remove_interface,
-	.config = iwl_mvm_mac_config,
 	.prepare_multicast = iwl_mvm_prepare_multicast,
 	.configure_filter = iwl_mvm_configure_filter,
 	.config_iface_filter = iwl_mvm_config_iface_filter,

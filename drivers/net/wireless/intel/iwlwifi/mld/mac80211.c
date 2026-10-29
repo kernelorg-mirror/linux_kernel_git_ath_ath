@@ -395,6 +395,10 @@ static void iwl_mac_hw_set_wiphy(struct iwl_mld *mld)
 	if (fw_has_capa(ucode_capa, IWL_UCODE_TLV_CAPA_PROTECTED_TWT))
 		wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_PROTECTED_TWT);
 
+	if (fw_has_capa(ucode_capa, IWL_UCODE_TLV_CAPA_ASSOC_ENC_SUPPORT))
+		wiphy_ext_feature_set(wiphy,
+				      NL80211_EXT_FEATURE_ASSOC_FRAME_ENCRYPTION);
+
 	if (iwlmld_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
 		wiphy->flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
 	else
@@ -646,13 +650,6 @@ void iwl_mld_mac80211_stop(struct ieee80211_hw *hw, bool suspend)
 			      "UMAC scan UID %d status was not cleaned (0x%x 0x%x)\n",
 			      i, mld->scan.uid_status[i], mld->scan.status))
 			mld->scan.uid_status[i] = 0;
-}
-
-static
-int iwl_mld_mac80211_config(struct ieee80211_hw *hw, int radio_idx,
-			    u32 changed)
-{
-	return 0;
 }
 
 static
@@ -2164,6 +2161,8 @@ static int iwl_mld_resume(struct ieee80211_hw *hw)
 
 	iwl_mld_low_latency_restart(mld);
 
+	iwl_mld_tx_gp2_start(mld);
+
 	return 0;
 }
 #endif
@@ -2915,7 +2914,6 @@ const struct ieee80211_ops iwl_mld_hw_ops = {
 	.tx = iwl_mld_mac80211_tx,
 	.start = iwl_mld_mac80211_start,
 	.stop = iwl_mld_mac80211_stop,
-	.config = iwl_mld_mac80211_config,
 	.get_antenna = iwl_mld_get_antenna,
 	.set_antenna = iwl_mld_set_antenna,
 	.add_interface = iwl_mld_mac80211_add_interface,
