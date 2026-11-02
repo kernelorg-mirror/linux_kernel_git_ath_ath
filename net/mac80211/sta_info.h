@@ -484,7 +484,8 @@ struct ieee80211_fragment_cache {
  * @capa_nss: NSS limit as determined by local and peer capabilities
  * @link_hash_node: hash node for rhashtable
  * @sta: Points to the STA info
- * @gtk: group keys negotiated with this station, if any
+ * @rx_gtk: group keys negotiated with this station, if any
+ * @rx_cigtk: control integrity group keys negotiated with this station, if any
  * @tx_stats: TX statistics
  * @tx_stats.packets: # of packets transmitted
  * @tx_stats.bytes: # of bytes in all packets transmitted
@@ -521,6 +522,7 @@ struct ieee80211_fragment_cache {
  * @uhr_dbe_enabled: for STAs as clients to an AP interface indicates
  *	DBE is enabled by the STA
  * @debugfs_dir: debug filesystem directory dentry
+ * @key_destroy_list: used during removal, keys to destroy
  * @pub: public (driver visible) link STA data
  */
 struct link_sta_info {
@@ -532,9 +534,10 @@ struct link_sta_info {
 	struct rhlist_head link_hash_node;
 
 	struct sta_info *sta;
-	struct ieee80211_key __rcu *gtk[NUM_DEFAULT_KEYS +
-					NUM_DEFAULT_MGMT_KEYS +
-					NUM_DEFAULT_BEACON_KEYS];
+	struct ieee80211_key __rcu *rx_gtk[NUM_DEFAULT_KEYS +
+					   NUM_DEFAULT_MGMT_KEYS +
+					   NUM_DEFAULT_BEACON_KEYS];
+	struct ieee80211_key __rcu *rx_cigtk[NUM_CTRL_KEYS];
 	struct ieee80211_sta_rx_stats __percpu *pcpu_rx_stats;
 
 	/* Updated from RX path only, no locking requirements */
@@ -578,6 +581,8 @@ struct link_sta_info {
 #ifdef CONFIG_MAC80211_DEBUGFS
 	struct dentry *debugfs_dir;
 #endif
+
+	struct list_head key_destroy_list;
 
 	struct ieee80211_link_sta *pub;
 };
@@ -987,8 +992,14 @@ static inline int sta_info_flush(struct ieee80211_sub_if_data *sdata,
 void sta_set_rate_info_tx(struct sta_info *sta,
 			  const struct ieee80211_tx_rate *rate,
 			  struct rate_info *rinfo);
-void sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo,
-		   bool tidstats);
+int __sta_set_sinfo(struct sta_info *sta, struct station_info *sinfo,
+		    bool tidstats, bool locked);
+
+static inline void sta_set_sinfo(struct sta_info *sta,
+				 struct station_info *sinfo, bool tidstats)
+{
+	__sta_set_sinfo(sta, sinfo, tidstats, true);
+}
 
 void sta_set_accumulated_removed_links_sinfo(struct sta_info *sta,
 					     struct station_info *sinfo);

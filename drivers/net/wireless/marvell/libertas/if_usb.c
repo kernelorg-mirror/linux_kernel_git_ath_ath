@@ -319,6 +319,12 @@ static void if_usb_disconnect(struct usb_interface *intf)
 
 	/* Unlink and free urb */
 	if_usb_free(cardp);
+
+	/* A firmware download in progress can re-arm fw_timeout from the RX
+	 * completion path, so make sure it is gone before freeing the card.
+	 */
+	timer_delete_sync(&cardp->fw_timeout);
+
 	kfree(cardp);
 
 	usb_set_intfdata(intf, NULL);
@@ -798,10 +804,18 @@ static int check_fwfile_format(const uint8_t *data, uint32_t totlen)
 	exit = len = 0;
 
 	do {
-		struct fwheader *fwh = (void *)data;
+		struct fwheader *fwh;
+
+		if (totlen - len < sizeof(*fwh))
+			break;
+
+		fwh = (void *)data;
 
 		bincmd = le32_to_cpu(fwh->dnldcmd);
 		blksize = le32_to_cpu(fwh->datalength);
+		if (blksize > totlen - len - sizeof(*fwh))
+			break;
+
 		switch (bincmd) {
 		case FW_HAS_DATA_TO_RECV:
 			offset = sizeof(struct fwheader) + blksize;
