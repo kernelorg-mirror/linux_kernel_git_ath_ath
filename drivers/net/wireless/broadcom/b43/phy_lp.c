@@ -4,7 +4,7 @@
   Broadcom B43 wireless driver
   IEEE 802.11a/g LP-PHY driver
 
-  Copyright (c) 2008-2009 Michael Buesch <m@bues.ch>
+  Copyright (c) 2008-2009 Michael Buesch
   Copyright (c) 2009 Gábor Stefanik <netrolller.3d@gmail.com>
 
 
@@ -43,7 +43,7 @@ static int b43_lpphy_op_allocate(struct b43_wldev *dev)
 {
 	struct b43_phy_lp *lpphy;
 
-	lpphy = kzalloc(sizeof(*lpphy), GFP_KERNEL);
+	lpphy = kzalloc_obj(*lpphy);
 	if (!lpphy)
 		return -ENOMEM;
 	dev->phy.lp = lpphy;
